@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Prova ou Reprova",
+  "description": "Uma aplicação web de perguntas e respostas para telas grandes, mediada por um apresentador e controlada via botões de hardware (teclado hackeado) com sistema de debounce e placar em tempo real.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
