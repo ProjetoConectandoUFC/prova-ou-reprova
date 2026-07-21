@@ -1,9 +1,6 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
+// Importa o gancho useState para gerenciar estados locais, useEffect para efeitos colaterais e useRef para referências mutáveis que persistem entre renderizações
 import React, { useState, useEffect, useRef } from 'react';
+// Importa ícones da biblioteca Lucide React para renderizar elementos visuais na interface
 import { Play, CheckCircle, Hand, FastForward, Trophy, AlertTriangle, Maximize, Minimize, Home } from 'lucide-react';
 
 // ==========================================
@@ -64,6 +61,7 @@ export default function App() {
   // --- Fullscreen State ---
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Efeito colateral para monitorar alterações no modo de tela cheia do navegador
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -348,9 +346,7 @@ export default function App() {
     }));
     
     addLog('RESPOSTA_AVALIADA', `J1: ${p1Delta} / J2: ${p2Delta} | Gabarito: ${currentQ.correta} | Escolhida: ${selectedAlternative}`);
-  };
-
-  // --- Controller Apresentador: Avançar Roteiro ---
+// --- Controller Apresentador: Avançar Roteiro ---
   const handleAdvanceSequence = () => {
     const isLastAvailableRound = currentQuestionIdx >= questions.length - 1;
 
@@ -625,8 +621,8 @@ export default function App() {
           )}
 
           <div className="flex gap-16 text-5xl font-black mt-8">
-              <span className="bg-white py-6 px-12 rounded-3xl border-4 border-cyan-200 text-cyan-600 shadow-xl">E1 = {score.p1} pts</span>
-              <span className="bg-white py-6 px-12 rounded-3xl border-4 border-orange-200 text-orange-600 shadow-xl">E2 = {score.p2} pts</span>
+             <span className="bg-white py-6 px-12 rounded-3xl border-4 border-cyan-200 text-cyan-600 shadow-xl">E1 = {score.p1} pts</span>
+             <span className="bg-white py-6 px-12 rounded-3xl border-4 border-orange-200 text-orange-600 shadow-xl">E2 = {score.p2} pts</span>
           </div>
 
           <a 
@@ -664,7 +660,7 @@ export default function App() {
                  <span className="relative flex h-5 w-5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-5 w-5 bg-emerald-500"></span>
-                  </span>
+                 </span>
                  BOTÕES ATIVOS. AGUARDANDO DISPUTA...
               </span>
             </div>
@@ -690,7 +686,7 @@ export default function App() {
 
           {gameState === 'GAME_OVER' && (
              <button onClick={() => { setGameState('WAITING_TO_START'); setScore({ p1: 0, p2: 0 }); }} className="group relative inline-flex items-center justify-center px-12 py-4 text-xl font-black text-slate-800 bg-slate-200 border-b-8 border-slate-300 rounded-full hover:bg-slate-300 active:border-b-0 active:translate-y-2">
-               NOVA PARTIDA
+                NOVA PARTIDA
              </button>
           )}
           
@@ -700,4 +696,4 @@ export default function App() {
     </div>
   );
 }
-
+ 
