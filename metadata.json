@@ -1,3 +1,4 @@
+// Configura as informações básicas da aplicação, como o nome, a descrição do jogo de perguntas e respostas para telas grandes com controle de botões físicos, e os recursos especiais usados, como a inteligência artificial do Gemini no servidor.
 {
   "name": "Remix: Prova ou Reprova",
   "description": "Uma aplicação web de perguntas e respostas para telas grandes, mediada por um apresentador e controlada via botões de hardware (teclado hackeado) com sistema de debounce e placar em tempo real.",
