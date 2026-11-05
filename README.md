@@ -1,20 +1,55 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Prova ou Reprova (Conectando)
 
-# Run and deploy your AI Studio app
+Jogo de perguntas e respostas para telão, com duas equipes e um apresentador. Esta branch contém a **versão desktop offline** (Electron), que funciona sem internet.
 
-This contains everything you need to run your app locally.
+> **Atenção:** a interface em `dist/` é a versão **compilada**. O código-fonte React dessa versão não está neste repositório. O código-fonte antigo continua na branch `main`.
 
-View your app in AI Studio: https://ai.studio/apps/3a5de913-fdfd-48d4-ab44-e463a397a2a0
+## Como rodar
 
-## Run Locally
+Requer [Node.js](https://nodejs.org/) 18 ou mais recente.
 
-**Prerequisites:**  Node.js
+```bash
+npm install
+npm start
+```
 
+Para gerar o executável do Windows (pasta `out/`):
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+npm run package:win
+```
+
+## Estrutura
+
+| Caminho | O que é |
+| --- | --- |
+| `electron/main.cjs` | Processo principal: abre a janela, serve a interface num servidor local e lê/grava as perguntas. |
+| `dist/` | Interface compilada (React + Tailwind). |
+| `dist/ajuste-tela.*` | Ajustes de layout: nenhuma tela precisa de rolagem, mais as cores do fundo e da escolha de tema. |
+| `dist/editor-questoes.*` | Painel **Questões**: listar, editar, apagar e alterar em massa, além de adicionar perguntas uma a uma ou importar um CSV. |
+| `perguntas.csv` | Banco de perguntas embutido. |
+| `LEIA-ME.txt` | Instruções para quem usa o executável. |
+
+## Perguntas
+
+No primeiro uso, o `perguntas.csv` embutido é copiado para `Documentos/Prova ou Reprova/`. A partir daí o jogo lê essa cópia, e o painel **Questões** (botão ao lado do Debug) grava nela. Antes de cada gravação o painel guarda uma cópia do arquivo anterior em `Documentos/Prova ou Reprova/backups/`.
+
+Formato do CSV (vírgula ou ponto e vírgula, UTF-8 ou Excel):
+
+```
+ID,tema,pergunta,a,b,c,d,correta,fonte_completa,fonte_curta,dificuldade
+```
+
+- `correta`: A, B, C ou D.
+- `dificuldade`: F, M ou D.
+
+## Teclas
+
+| Tecla | Ação |
+| --- | --- |
+| `A` | Botão da Equipe 1 |
+| `L` | Botão da Equipe 2 |
+| `F11` | Tela cheia |
+| `F2` | Painel de debug |
+| `Ctrl+R` | Recarregar |
+| `Ctrl+Shift+O` | Abrir a pasta de dados |

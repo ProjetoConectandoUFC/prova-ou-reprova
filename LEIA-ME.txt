@@ -1,0 +1,20 @@
+PROVA OU REPROVA - versao Windows (nova interface Conectando)
+
+COMO ABRIR
+Descompacte a pasta inteira e de dois cliques em "Prova ou Reprova.exe".
+Se aparecer "O Windows protegeu o computador": Mais informacoes > Executar assim mesmo.
+Funciona sem internet.
+
+PERGUNTAS
+O titulo da janela mostra quantas perguntas foram carregadas e de qual arquivo.
+Ordem de busca do perguntas.csv:
+1. Na mesma pasta do "Prova ou Reprova.exe"
+2. Documentos\Prova ou Reprova\perguntas.csv
+3. Banco embutido (225 perguntas)
+Pode salvar o CSV pelo Excel normalmente.
+
+TECLAS
+A = Equipe 1   L = Equipe 2   F11 = tela cheia   F2 = debug
+Ctrl+R = recarregar   Ctrl+Shift+O = abrir a pasta Documentos\Prova ou Reprova
+
+O historico das partidas fica em Documentos\Prova ou Reprova\logs_arena.csv

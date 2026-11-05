@@ -1,0 +1,66 @@
+/* Prova ou Reprova: ajustes para que nenhuma tela precise de rolagem.
+   Trabalha junto com ajuste-tela.js (que reduz o conteúdo quando ele não cabe). */
+
+html, body { overflow: hidden; height: 100%; }
+
+/* Painel da fonte na tela de resultado: mais compacto */
+.painel-fonte {
+  margin-top: clamp(0.75rem, 2.2vh, 1.75rem);
+  padding-top: clamp(0.6rem, 1.6vh, 1.25rem);
+  padding-bottom: clamp(0.6rem, 1.6vh, 1.25rem);
+}
+
+/* Laço pequeno (canto inferior esquerdo): removido. A própria imagem é recortada
+   nas bordas, então sempre aparecia "cortada" no meio da tela. */
+.laco-pequeno { display: none !important; }
+
+/* No lugar dele: o laço grande da direita, espelhado na diagonal (canto inferior
+   esquerdo) e um pouco menor, para equilibrar o fundo sem ficar simétrico.
+   A borda que fica no meio da tela some num degradê, para não parecer cortada. */
+.palco::before {
+  content: ''; position: fixed; bottom: 0; left: 0; z-index: 0; pointer-events: none;
+  height: 72vh; aspect-ratio: 737 / 714;
+  background: url(/assets/laco-grande-Dcuko3eh.png) left top / contain no-repeat;
+  transform: scaleY(-1);
+  -webkit-mask-image: linear-gradient(to top, transparent 0, #000 14%);
+  mask-image: linear-gradient(to top, transparent 0, #000 14%);
+  opacity: var(--laco-opacidade);
+}
+
+/* Escolha do tema: o selecionado usa a paleta da interface (cor do tema,
+   contorno azul-noite e sombra dura), no lugar do preto com azul */
+.tema-cor-amarelo { --tema-cor: var(--amarelo); }
+.tema-cor-rosa    { --tema-cor: var(--nota-b); }
+.tema-cor-celeste { --tema-cor: var(--celeste); }
+.tema-cor-laranja { --tema-cor: #f5a04a; }
+.tema-cor-verde   { --tema-cor: var(--nota-a); }
+.tema-sel {
+  background: var(--tema-cor, var(--amarelo));
+  border-color: var(--noite) !important;
+  color: var(--noite);
+  box-shadow: 6px 6px 0 var(--noite);
+  transform: translate(-2px, -2px);
+}
+.tema-sel > div:last-child { border-top-color: rgba(32, 39, 79, .25) !important; }
+.tema-sel-icone { background: #fff; color: var(--noite); border: 2px solid var(--noite); }
+.tema-sel-badge { background: var(--noite); color: #fff; font-weight: 900; }
+.tema-sel-desc { color: var(--noite); opacity: .8; }
+.tema-sel-ok { color: var(--noite); }
+.dif-sel {
+  background: var(--amarelo); border-color: var(--noite) !important; color: var(--noite);
+  box-shadow: 3px 3px 0 var(--noite);
+}
+.dif-sel-qtd { background: var(--noite); color: #fff; }
+
+/* Configurar partida: duas colunas para caber sem rolagem */
+.modal-config { max-width: min(76rem, 96vw); }
+@media (min-width: 900px) {
+  .modal-config > .space-y-6 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 2.5rem;
+    row-gap: 1.25rem;
+    align-content: start;
+  }
+  .modal-config > .space-y-6 > * { margin-top: 0 !important; margin-bottom: 0 !important; }
+}
