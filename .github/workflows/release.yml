@@ -1,0 +1,89 @@
+# Gera os executáveis (Windows e macOS) e anexa à release publicada.
+# Também pode ser disparado à mão (Actions > Gerar executáveis > Run workflow)
+# informando a tag de uma release existente.
+name: Gerar executáveis
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag da release que vai receber os arquivos (ex.: v1.0.0)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win32
+            arch: x64
+            asset: ProvaOuReprova-Windows-x64.zip
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
+            asset: ProvaOuReprova-macOS-AppleSilicon.zip
+          - os: macos-latest
+            platform: darwin
+            arch: x64
+            asset: ProvaOuReprova-macOS-Intel.zip
+    runs-on: ${{ matrix.os }}
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Empacotar
+        shell: bash
+        run: |
+          ICON=electron/icon.ico
+          EXTRA=""
+          if [ "${{ matrix.platform }}" = "darwin" ]; then
+            ICON=electron/icon.icns
+            EXTRA="--app-bundle-id=br.ufc.conectando.provaoureprova --app-category-type=public.app-category.education"
+          fi
+          npx electron-packager . "Prova ou Reprova" \
+            --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} \
+            --icon=$ICON --out=out --overwrite \
+            --ignore="^/out" --ignore="^/README.md" --ignore="^/.github" \
+            --app-copyright="Projeto Conectando - UFC" $EXTRA
+
+      - name: Compactar (Windows)
+        if: matrix.platform == 'win32'
+        shell: pwsh
+        run: |
+          Copy-Item LEIA-ME.txt "out/Prova ou Reprova-win32-x64/"
+          Compress-Archive -Path "out/Prova ou Reprova-win32-x64" -DestinationPath "${{ matrix.asset }}"
+
+      # Sem certificado da Apple: assinatura ad-hoc, necessária para rodar em Apple Silicon
+      - name: Assinar (ad-hoc, macOS)
+        if: matrix.platform == 'darwin'
+        run: |
+          APP="out/Prova ou Reprova-darwin-${{ matrix.arch }}/Prova ou Reprova.app"
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
+      - name: Compactar (macOS)
+        if: matrix.platform == 'darwin'
+        run: |
+          cd "out/Prova ou Reprova-darwin-${{ matrix.arch }}"
+          ditto -c -k --sequesterRsrc --keepParent "Prova ou Reprova.app" "$GITHUB_WORKSPACE/${{ matrix.asset }}"
+
+      - name: Anexar à release
+        shell: bash
+        run: gh release upload "$TAG" "${{ matrix.asset }}" --clobber

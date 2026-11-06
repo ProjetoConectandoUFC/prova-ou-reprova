@@ -201,3 +201,14 @@
 }
 .eq-toast.eq-mostrar { opacity: 1; transform: translateX(-50%) translateY(0); }
 .eq-toast.eq-ruim { box-shadow: 4px 4px 0 #f87171; }
+
+/* Setas para navegar entre questões no editor */
+.eq-nav { display: inline-flex; align-items: center; gap: .35rem; margin-right: .5rem; }
+.eq-nav-btn {
+  width: 2.5rem; height: 2.5rem; border-radius: 999px; cursor: pointer;
+  border: 2px solid var(--noite, #20274f); background: #fff; color: var(--noite, #20274f);
+  font: 700 1.5rem/1 "Poppins", "Segoe UI", system-ui, sans-serif; padding-bottom: .15rem;
+}
+.eq-nav-btn:hover:not(:disabled) { background: var(--amarelo, #fde300); }
+.eq-nav-btn:disabled { opacity: .3; cursor: default; }
+.eq-nav-pos { min-width: 5.5rem; text-align: center; font-size: .85rem; font-weight: 700; color: #475569; }

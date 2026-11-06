@@ -1,0 +1,82 @@
+/* Prova ou Reprova: menu do apresentador e opções de exibição. */
+
+/* Botões originais do apresentador: agora ficam dentro do menu */
+.host-oculto { display: none !important; }
+.config-exibir-id { display: none !important; }
+
+/* Opções "Exibir na pergunta" */
+.ocultar-id .chip-id,
+.ocultar-dif .chip-dif,
+.ocultar-tema .chip-tema { display: none !important; }
+
+.ma-botao {
+  position: fixed; top: 20px; right: 20px; z-index: 9999;
+  width: 3.25rem; height: 3.25rem; border-radius: 14px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 2px solid var(--azul, #1d58a4); background: var(--creme, #fcfaf1); color: var(--noite, #20274f);
+  transition: transform .15s, background .15s;
+}
+.ma-botao:hover { background: #fff; }
+.ma-botao[aria-expanded="true"] { background: var(--amarelo, #fde300); border-color: var(--noite, #20274f); }
+
+.ma-menu {
+  position: fixed; top: calc(20px + 3.25rem + 10px); right: 20px; z-index: 9999;
+  width: 290px; padding: .6rem;
+  background: var(--creme, #fcfaf1); color: var(--noite, #20274f);
+  border: 3px solid var(--noite, #20274f); border-radius: 1.25rem; box-shadow: 6px 6px 0 var(--noite, #20274f);
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+}
+.ma-menu[hidden] { display: none; }
+.ma-titulo {
+  padding: .45rem .6rem .3rem; font-size: .68rem; font-weight: 800;
+  letter-spacing: .09em; text-transform: uppercase; color: #64748b;
+}
+.ma-item {
+  width: 100%; display: flex; align-items: center; gap: .7rem; padding: .65rem .6rem;
+  border: 0; border-radius: .8rem; background: transparent; color: inherit; cursor: pointer; text-align: left;
+  font: 600 .95rem/1.2 "Poppins", "Segoe UI", system-ui, sans-serif;
+}
+.ma-item:hover, .ma-item:focus-visible { background: #fff; outline: none; }
+.ma-item span { flex: 1; }
+.ma-item small { font-size: .72rem; font-weight: 600; color: #64748b; }
+.ma-item small.ma-ativo { color: #047857; }
+.ma-sep { height: 2px; margin: .45rem .3rem; background: rgba(32, 39, 79, .1); border-radius: 2px; }
+
+.ma-opcao {
+  display: flex; align-items: center; justify-content: space-between; gap: .7rem;
+  padding: .55rem .6rem; border-radius: .8rem; cursor: pointer; font-size: .92rem; font-weight: 600;
+}
+.ma-opcao:hover { background: #fff; }
+.ma-opcao input { position: absolute; opacity: 0; pointer-events: none; }
+.ma-chave {
+  position: relative; flex: none; width: 2.6rem; height: 1.5rem; border-radius: 999px;
+  background: #cbd5e1; border: 2px solid var(--noite, #20274f); transition: background .15s;
+}
+.ma-chave::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: calc(1.5rem - 8px); height: calc(1.5rem - 8px);
+  border-radius: 999px; background: #fff; border: 2px solid var(--noite, #20274f); transition: transform .15s;
+}
+.ma-opcao input:checked + .ma-chave { background: var(--amarelo, #fde300); }
+.ma-opcao input:checked + .ma-chave::after { transform: translateX(1.1rem); }
+.ma-opcao input:focus-visible + .ma-chave { box-shadow: 0 0 0 3px rgba(29, 88, 164, .35); }
+
+/* Tamanho do texto da pergunta e das alternativas */
+.txt-pergunta { font-size: calc(clamp(1.45rem, 3.1vh + .3rem, 3rem) * var(--escala-texto, 1)) !important; }
+.txt-alternativa { font-size: calc(clamp(1.05rem, 2.1vh + .15rem, 1.9rem) * var(--escala-texto, 1)) !important; }
+
+.ma-tamanhos { display: grid; grid-template-columns: repeat(5, 1fr); gap: .3rem; padding: .2rem .4rem .1rem; }
+.ma-tamanhos button {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: .1rem;
+  height: 3.3rem; padding: .3rem 0; cursor: pointer; color: var(--noite, #20274f);
+  background: #fff; border: 2px solid rgba(32, 39, 79, .18); border-radius: .7rem;
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+}
+.ma-tamanhos button:hover { border-color: var(--noite, #20274f); }
+.ma-tamanhos button b { font-weight: 800; line-height: 1; }
+.ma-tamanhos button small { font-size: .62rem; font-weight: 700; color: #64748b; }
+.ma-tamanhos button.ma-sel { background: var(--amarelo, #fde300); border-color: var(--noite, #20274f); box-shadow: 2px 2px 0 var(--noite, #20274f); }
+.ma-tamanhos button.ma-sel small { color: var(--noite, #20274f); }
+.ma-dica { padding: .35rem .6rem .2rem; font-size: .72rem; color: #64748b; }
+/* Com texto maior, a área da pergunta também fica mais larga (linhas mais longas,
+   menos altura), para o ajuste de tela não ter que reduzir tudo de volta */
+.palco > .max-w-6xl { max-width: calc(72rem * max(1, var(--escala-texto, 1))); }

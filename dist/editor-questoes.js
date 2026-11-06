@@ -161,22 +161,6 @@
     }).finally(function () { estado.salvando = false; });
   }
 
-  // ---------- botão ao lado do Debug ----------
-  var lancador;
-  function posicionarLancador() {
-    if (!lancador) return;
-    var dbg = document.querySelector('button[title^="Painel de Debug"]');
-    if (dbg) {
-      var r = dbg.getBoundingClientRect();
-      lancador.style.right = Math.round(window.innerWidth - r.left + 12) + 'px';
-      lancador.style.top = Math.round(r.top) + 'px';
-      lancador.style.height = Math.round(r.height) + 'px';
-      lancador.hidden = false;
-    } else {
-      lancador.hidden = true;
-    }
-  }
-
   // ---------- painel principal ----------
   var painel, camadas = [];
 
@@ -361,8 +345,17 @@
   }
 
   // ---------- editor de uma pergunta ----------
-  function abrirEditor(id) {
+  // seq: IDs da lista que estava na tela, para navegar com as setas
+  function abrirEditor(id, seq) {
     var orig = id != null ? estado.perguntas.find(function (q) { return q.id === id; }) : null;
+    seq = orig ? (seq || visiveis().map(function (x) { return x.id; })) : [];
+    var pos = orig ? seq.indexOf(orig.id) : -1;
+    var nav = pos === -1 ? '' :
+      '<div class="eq-nav">' +
+        '<button class="eq-nav-btn" data-a="anterior" title="Questão anterior (Alt+←)"' + (pos === 0 ? ' disabled' : '') + '>‹</button>' +
+        '<span class="eq-nav-pos">' + (pos + 1) + ' de ' + seq.length + '</span>' +
+        '<button class="eq-nav-btn" data-a="proxima" title="Próxima questão (Alt+→)"' + (pos === seq.length - 1 ? ' disabled' : '') + '>›</button>' +
+      '</div>';
     var temaPadrao = estado.tema !== '__todos' ? estado.tema : (temas()[0] || ['Geral'])[0];
     var q = orig ? Object.assign({}, orig) : { id: proximoId(temaPadrao), tema: temaPadrao, pergunta: '', a: '', b: '', c: '', d: '', correta: 'A', fonte_completa: '', fonte_curta: '', dificuldade: 'M' };
     var idAuto = !orig;
@@ -380,7 +373,7 @@
       '<div class="eq eq-camada eq-sobre">' +
         '<div class="eq-caixa eq-modal" role="dialog">' +
           '<div class="eq-topo"><div><h2>' + (orig ? 'Editar questão' : 'Nova questão') + '</h2><div class="eq-sub">' + (orig ? 'ID original: ' + esc(orig.id) : 'Preencha os campos e salve') + '</div></div>' +
-            '<div class="eq-espaco"></div><button class="eq-icone-fechar" data-a="cancelar" title="Fechar (Esc)">×</button></div>' +
+            '<div class="eq-espaco"></div>' + nav + '<button class="eq-icone-fechar" data-a="cancelar" title="Fechar (Esc)">×</button></div>' +
           '<div class="eq-corpo">' +
             '<div class="eq-linha3">' +
               '<label class="eq-campo"><span>ID</span><input class="eq-input" data-f="id" value="' + esc(q.id) + '"></label>' +
@@ -466,11 +459,39 @@
         return;
       }
       if (b.dataset.a === 'cancelar') return fecharTopo();
+      if (b.dataset.a === 'anterior') return irPara(-1);
+      if (b.dataset.a === 'proxima') return irPara(1);
       if (b.dataset.a === 'apagar') {
         return apagar([orig.id]).then(function (ok) { if (ok) fecharTopo(); });
       }
       if (b.dataset.a === 'salvar') salvarEditor();
     });
+    cam.addEventListener('keydown', function (e) {
+      if (!e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+      e.preventDefault();
+      irPara(e.key === 'ArrowLeft' ? -1 : 1);
+    }, true);
+
+    function alterada() {
+      if (!orig) return false;
+      var n = ler();
+      return ['id', 'tema', 'pergunta', 'a', 'b', 'c', 'd', 'correta', 'fonte_completa', 'fonte_curta', 'dificuldade']
+        .some(function (k) { return String(n[k] || '') !== String(orig[k] || ''); });
+    }
+
+    // Troca para a questão vizinha na mesma lista; pergunta antes de descartar edições
+    function irPara(delta) {
+      var alvo = seq[pos + delta];
+      if (pos === -1 || alvo == null) return;
+      var pronto = alterada() ? confirmar('Esta questão tem alterações não salvas. Descartar e ir para a ' + (delta < 0 ? 'anterior' : 'próxima') + '?', 'Descartar e continuar') : Promise.resolve(true);
+      pronto.then(function (ok) {
+        if (!ok) return;
+        var i = camadas.indexOf(cam); if (i !== -1) camadas.splice(i, 1);
+        cam.remove();
+        if (estado.perguntas.some(function (x) { return x.id === alvo; })) abrirEditor(alvo, seq);
+        else aviso('A questão ' + alvo + ' não existe mais.', true);
+      });
+    }
 
     function salvarEditor() {
       var n = ler();
@@ -613,22 +634,6 @@
   }
 
   // ---------- início ----------
-  function iniciar() {
-    lancador = el('<button class="eq eq-lancador" title="Banco de questões: editar, adicionar e importar" hidden>' + ICONES.lista + '<span>Questões</span></button>');
-    lancador.addEventListener('click', abrir);
-    document.body.appendChild(lancador);
-    var agendado = false;
-    function agendar() {
-      if (agendado) return;
-      agendado = true;
-      requestAnimationFrame(function () { agendado = false; posicionarLancador(); });
-    }
-    new MutationObserver(agendar).observe(document.getElementById('root') || document.body, { childList: true, subtree: true, characterData: true });
-    window.addEventListener('resize', agendar);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(agendar);
-    agendar();
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
-  else iniciar();
+  // O painel é aberto pelo menu do apresentador (menu-apresentador.js)
+  window.EditorQuestoes = { abrir: abrir };
 })();

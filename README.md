@@ -27,6 +27,7 @@ npm run package:win
 | `dist/` | Interface compilada (React + Tailwind). |
 | `dist/ajuste-tela.*` | Ajustes de layout: nenhuma tela precisa de rolagem, mais as cores do fundo e da escolha de tema. |
 | `dist/editor-questoes.*` | Painel **Questões**: listar, editar, apagar e alterar em massa, além de adicionar perguntas uma a uma ou importar um CSV. |
+| `dist/menu-apresentador.*` | Menu ☰ do apresentador: Questões, Debug e Tela cheia; exibir ou ocultar código, dificuldade e tema; tamanho do texto. |
 | `perguntas.csv` | Banco de perguntas embutido. |
 | `LEIA-ME.txt` | Instruções para quem usa o executável. |
 
