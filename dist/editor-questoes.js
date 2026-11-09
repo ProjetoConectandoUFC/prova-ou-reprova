@@ -14,11 +14,12 @@
     editar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
     lixo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
     mais: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+    tag: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>',
     upload: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>',
   };
 
   var estado = {
-    arquivo: '', hash: '', perguntas: [],
+    arquivo: '', hash: '', perguntas: [], categorias: [],
     tema: '__todos', dif: '', busca: '',
     sel: new Set(),
     salvando: false,
@@ -32,11 +33,54 @@
   }
   function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
   function norm(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+  // Lista de categorias: as cadastradas (categorias.json) + as que aparecem nas perguntas
   function temas() {
     var m = new Map();
-    estado.perguntas.forEach(function (q) { m.set(q.tema, (m.get(q.tema) || 0) + 1); });
+    estado.categorias.forEach(function (c) { m.set(c.nome, 0); });
+    estado.perguntas.forEach(function (q) {
+      var k = nomeCanonico(q.tema, m);
+      m.set(k, (m.get(k) || 0) + 1);
+    });
     return Array.from(m.entries());
   }
+  function nomeCanonico(t, mapa) {
+    var alvo = String(t || '').trim().toLowerCase();
+    var achado = null;
+    (mapa || new Map(temas())).forEach(function (v, k) { if (!achado && k.toLowerCase() === alvo) achado = k; });
+    return achado || String(t || '').trim();
+  }
+  function mesmoTema(a, b) { return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase(); }
+
+  // Descrição e cor de cada categoria (padrões para os temas originais)
+  var CORES = [
+    { id: 'amarelo', nome: 'Amarelo', hex: '#fde300' }, { id: 'rosa', nome: 'Rosa', hex: '#f0848f' },
+    { id: 'celeste', nome: 'Azul-claro', hex: '#62bfff' }, { id: 'laranja', nome: 'Laranja', hex: '#f5a04a' },
+    { id: 'verde', nome: 'Verde-água', hex: '#43b3b4' }, { id: 'roxo', nome: 'Lilás', hex: '#b39cf5' },
+    { id: 'lima', nome: 'Verde-limão', hex: '#a8d86b' },
+  ];
+  function padraoCategoria(nome) {
+    var o = norm(nome);
+    if (o.indexOf('desinform') !== -1) return { descricao: 'Identificação de boatos, checagem e mídias digitais', cor: 'rosa' };
+    if (o.indexOf('ciencia') !== -1 || o.indexOf('tecnologia') !== -1) return { descricao: 'Inovação, IA generativa, algoritmos e sociedade', cor: 'celeste' };
+    if (o.indexOf('arte') !== -1 || o.indexOf('cultura') !== -1) return { descricao: 'Música, manifestações artísticas e espaços urbanos', cor: 'laranja' };
+    return { descricao: 'Conhecimentos gerais e desafios da arena', cor: 'verde' };
+  }
+  function infoCategoria(nome) {
+    var c = estado.categorias.find(function (x) { return mesmoTema(x.nome, nome); });
+    var pad = padraoCategoria(nome);
+    return { nome: c ? c.nome : nome, descricao: (c && c.descricao) || pad.descricao, cor: (c && c.cor) || pad.cor, salva: !!c };
+  }
+  function hexCor(id) { var c = CORES.find(function (x) { return x.id === id; }); return c ? c.hex : '#43b3b4'; }
+
+  // Usado pela tela "Escolha o tema do duelo" do jogo (ver index-*.js)
+  var catJogo = [];
+  window.__alCat = function (nome, r) {
+    var c = catJogo.find(function (x) { return mesmoTema(x.nome, nome); });
+    if (!c) return r;
+    return Object.assign({}, r, { desc: c.descricao || r.desc, cor: c.cor ? 'tema-cor-' + c.cor : r.cor });
+  };
+  function atualizarCatJogo(lista) { catJogo = Array.isArray(lista) ? lista : []; }
+  fetch('/api/categorias').then(function (r) { return r.json(); }).then(atualizarCatJogo).catch(function () {});
 
   var toastEl, toastTimer;
   function aviso(msg, ruim) {
@@ -133,6 +177,7 @@
   function carregar() {
     return api('/api/editor/perguntas').then(function (j) {
       estado.arquivo = j.arquivo; estado.hash = j.hash; estado.perguntas = j.perguntas;
+      estado.categorias = j.categorias || []; atualizarCatJogo(estado.categorias);
       var ids = new Set(j.perguntas.map(function (q) { return q.id; }));
       estado.sel.forEach(function (id) { if (!ids.has(id)) estado.sel.delete(id); });
       renderPainel();
@@ -186,6 +231,7 @@
           '<div class="eq-topo">' +
             '<div><h2>Banco de questões</h2><div class="eq-sub" data-r="sub"></div></div>' +
             '<div class="eq-espaco"></div>' +
+            '<button class="eq-btn" data-a="categorias">' + ICONES.tag + 'Categorias</button>' +
             '<button class="eq-btn" data-a="importar">' + ICONES.upload + 'Importar CSV</button>' +
             '<button class="eq-btn eq-btn-pri" data-a="nova">' + ICONES.mais + 'Nova questão</button>' +
             '<button class="eq-icone-fechar" data-a="fechar" title="Fechar (Esc)">×</button>' +
@@ -197,7 +243,7 @@
           '</div>' +
           '<div class="eq-massa" data-r="massa" hidden>' +
             '<span><span class="eq-qtd" data-r="qtd"></span></span>' +
-            '<input class="eq-input" data-m="tema" list="eq-temas" placeholder="Novo tema">' +
+            '<select class="eq-select" data-m="tema" data-r="massa-tema"></select>' +
             '<select class="eq-select" data-m="dificuldade"><option value="">Dificuldade…</option><option value="F">Fácil</option><option value="M">Média</option><option value="D">Difícil</option></select>' +
             '<input class="eq-input" data-m="fonte_curta" placeholder="Fonte curta">' +
             '<input class="eq-input" data-m="fonte_completa" placeholder="Link da fonte">' +
@@ -225,6 +271,7 @@
       if (a === 'fechar') return fecharTopo();
       if (a === 'nova') return abrirEditor(null);
       if (a === 'importar') return abrirImportacao();
+      if (a === 'categorias') return abrirCategorias();
       if (a === 'limpar-sel') { estado.sel.clear(); return renderPainel(); }
       if (a === 'aplicar') return aplicarMassa();
       if (a === 'apagar-sel') return apagar(Array.from(estado.sel));
@@ -283,6 +330,7 @@
         return '<button class="eq-aba' + (estado.tema === t[0] ? ' eq-ativa' : '') + '" data-tema="' + esc(t[0]) + '">' + esc(t[0]) + '<b>' + t[1] + '</b></button>';
       }).join('');
     document.getElementById('eq-temas').innerHTML = ts.map(function (t) { return '<option value="' + esc(t[0]) + '">'; }).join('');
+    painel.querySelector('[data-r="massa-tema"]').innerHTML = '<option value="">Mudar categoria…</option>' + opcoesCategorias(null, false);
     renderLista();
     renderSelecao();
   }
@@ -377,7 +425,7 @@
           '<div class="eq-corpo">' +
             '<div class="eq-linha3">' +
               '<label class="eq-campo"><span>ID</span><input class="eq-input" data-f="id" value="' + esc(q.id) + '"></label>' +
-              '<label class="eq-campo"><span>Tema</span><input class="eq-input" data-f="tema" list="eq-temas" value="' + esc(q.tema) + '"></label>' +
+              '<label class="eq-campo"><span>Categoria</span><select class="eq-select" data-f="tema">' + opcoesCategorias(q.tema, true) + '</select></label>' +
               '<div class="eq-campo"><span>Dificuldade</span><div class="eq-seg" data-r="dif">' +
                 ['F', 'M', 'D'].map(function (d) { return '<button type="button" data-d="' + d + '"' + (q.dificuldade === d ? ' class="eq-ativa"' : '') + '>' + DIF_NOME[d] + '</button>'; }).join('') +
               '</div></div>' +
@@ -445,11 +493,29 @@
       if (e.target.dataset.f === 'id') idAuto = false;
       if (e.target.dataset.f === 'tema' && idAuto) {
         var t = e.target.value.trim();
-        if (t) cam.querySelector('[data-f="id"]').value = proximoId(t);
+        if (t && t !== '__nova') cam.querySelector('[data-f="id"]').value = proximoId(t);
       }
       atualizar();
     });
-    cam.addEventListener('change', atualizar);
+    var temaAnterior = q.tema;
+    cam.addEventListener('change', function (e) {
+      var sel = e.target;
+      if (sel.dataset.f === 'tema') {
+        if (sel.value === '__nova') {
+          sel.value = temaAnterior;
+          abrirFormCategoria(null).then(function (nome) {
+            if (!nome) return;
+            sel.innerHTML = opcoesCategorias(nome, true);
+            sel.value = nome;
+            sel.dispatchEvent(new Event('input', { bubbles: true }));
+            temaAnterior = nome;
+          });
+          return;
+        }
+        temaAnterior = sel.value;
+      }
+      atualizar();
+    });
     cam.addEventListener('mousedown', function (e) { if (e.target === cam) fecharTopo(); });
     cam.addEventListener('click', function (e) {
       var b = e.target.closest('[data-d],[data-a]');
@@ -511,6 +577,220 @@
     atualizar();
     cam.querySelectorAll('textarea').forEach(autoAltura);
     setTimeout(function () { cam.querySelector('[data-f="pergunta"]').focus(); }, 30);
+  }
+
+  // ---------- categorias ----------
+  function opcoesCategorias(atual, comNova) {
+    var ts = temas();
+    if (atual && !ts.some(function (t) { return mesmoTema(t[0], atual); })) ts.push([atual, 0]);
+    return ts.map(function (t) {
+      return '<option value="' + esc(t[0]) + '"' + (atual && mesmoTema(t[0], atual) ? ' selected' : '') + '>' + esc(t[0]) + '</option>';
+    }).join('') + (comNova ? '<option value="__nova">+ Nova categoria…</option>' : '');
+  }
+
+  // Grava categorias (e, se informado, a lista de perguntas junto)
+  function salvarCategorias(cats, lista, msg) {
+    if (estado.salvando) return Promise.reject(new Error('Aguarde a gravação anterior.'));
+    estado.salvando = true;
+    var corpo = { categorias: cats };
+    if (lista) { corpo.perguntas = lista; corpo.hash = estado.hash; }
+    return api('/api/editor/categorias', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo),
+    }).then(function (j) {
+      estado.categorias = j.categorias;
+      atualizarCatJogo(j.categorias);
+      if (lista) { estado.perguntas = lista; estado.hash = j.hash; }
+      renderPainel();
+      renderCategorias();
+      if (msg) aviso(msg);
+      return j;
+    }).catch(function (e) {
+      if (e.status === 409) {
+        e.message = 'O arquivo de perguntas foi alterado fora do painel. A lista foi recarregada; refaça a última alteração.';
+        aviso(e.message, true);
+        carregar();
+      }
+      throw e;
+    }).finally(function () { estado.salvando = false; });
+  }
+
+  // Todas as categorias (salvas + implícitas nas perguntas), com contagem
+  function categoriasCompletas() {
+    return temas().map(function (t) {
+      var salva = estado.categorias.find(function (x) { return mesmoTema(x.nome, t[0]); });
+      return { nome: t[0], descricao: salva ? salva.descricao : '', cor: salva ? salva.cor : '', qtd: t[1], info: infoCategoria(t[0]) };
+    });
+  }
+  function semExtras(lista) {
+    return lista.map(function (c) { return { nome: c.nome, descricao: c.descricao, cor: c.cor }; });
+  }
+
+  var camCategorias = null;
+  function abrirCategorias() {
+    camCategorias = el(
+      '<div class="eq eq-camada eq-sobre">' +
+        '<div class="eq-caixa eq-modal" role="dialog" aria-label="Categorias">' +
+          '<div class="eq-topo"><div><h2>Categorias</h2><div class="eq-sub">Aparecem na escolha do tema do duelo, com a descrição e a cor definidas aqui</div></div>' +
+            '<div class="eq-espaco"></div>' +
+            '<button class="eq-btn eq-btn-pri" data-a="nova-cat">' + ICONES.mais + 'Nova categoria</button>' +
+            '<button class="eq-icone-fechar" data-a="cancelar" title="Fechar (Esc)">×</button></div>' +
+          '<div class="eq-corpo" data-r="lista-cat"></div>' +
+        '</div>' +
+      '</div>'
+    );
+    var cam = camCategorias;
+    document.body.appendChild(cam);
+    camadas.push(cam);
+    isolarTeclado(cam);
+    cam.addEventListener('mousedown', function (e) { if (e.target === cam) fecharTopo(); });
+    cam.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-a]');
+      if (!b) return;
+      var linha = b.closest('[data-cat]');
+      var nome = linha ? linha.dataset.cat : null;
+      if (b.dataset.a === 'cancelar') return fecharTopo();
+      if (b.dataset.a === 'nova-cat') return abrirFormCategoria(null);
+      if (b.dataset.a === 'editar-cat') return abrirFormCategoria(nome);
+      if (b.dataset.a === 'apagar-cat') return apagarCategoria(nome);
+    });
+    renderCategorias();
+  }
+
+  function renderCategorias() {
+    if (!camCategorias || !document.body.contains(camCategorias)) return;
+    var lista = categoriasCompletas();
+    camCategorias.querySelector('[data-r="lista-cat"]').innerHTML = lista.length ? lista.map(function (c) {
+      return '<div class="eq-cat" data-cat="' + esc(c.nome) + '">' +
+        '<span class="eq-cat-cor" style="background:' + hexCor(c.info.cor) + '"></span>' +
+        '<div class="eq-cat-texto"><strong>' + esc(c.nome) + '</strong><small>' + esc(c.info.descricao) + '</small></div>' +
+        '<span class="eq-cat-qtd">' + c.qtd + (c.qtd === 1 ? ' pergunta' : ' perguntas') + '</span>' +
+        '<button class="eq-acao" data-a="editar-cat" title="Editar">' + ICONES.editar + '</button>' +
+        '<button class="eq-acao eq-del" data-a="apagar-cat" title="Excluir">' + ICONES.lixo + '</button>' +
+      '</div>';
+    }).join('') : '<div class="eq-vazio">Nenhuma categoria ainda.</div>';
+  }
+
+  // Formulário de criar/editar. Devolve (Promise) o nome salvo, ou null se cancelado.
+  function abrirFormCategoria(nomeAtual) {
+    return new Promise(function (resolve) {
+      var info = nomeAtual ? infoCategoria(nomeAtual) : { nome: '', descricao: '', cor: '' };
+      var salva = nomeAtual ? estado.categorias.find(function (x) { return mesmoTema(x.nome, nomeAtual); }) : null;
+      var corSel = nomeAtual ? info.cor : CORES[temas().length % CORES.length].id;
+      var cam = el(
+        '<div class="eq eq-camada eq-sobre" style="z-index:20020">' +
+          '<div class="eq-caixa eq-modal" style="max-width:620px" role="dialog">' +
+            '<div class="eq-topo"><div><h2>' + (nomeAtual ? 'Editar categoria' : 'Nova categoria') + '</h2>' +
+              (nomeAtual ? '<div class="eq-sub">Renomear atualiza todas as perguntas desta categoria</div>' : '') + '</div>' +
+              '<div class="eq-espaco"></div><button class="eq-icone-fechar" data-a="cancelar" title="Fechar (Esc)">×</button></div>' +
+            '<div class="eq-corpo">' +
+              '<label class="eq-campo"><span>Nome</span><input class="eq-input" data-c="nome" maxlength="60" value="' + esc(info.nome) + '" placeholder="Ex.: Meio Ambiente"></label>' +
+              '<label class="eq-campo"><span>Descrição (aparece na escolha do tema)</span><input class="eq-input" data-c="descricao" maxlength="140" value="' + esc(salva ? salva.descricao : '') + '" placeholder="' + esc(nomeAtual ? info.descricao : 'Ex.: Clima, biodiversidade e cidades sustentáveis') + '"></label>' +
+              '<div class="eq-campo"><span>Cor</span><div class="eq-cores">' +
+                CORES.map(function (c) {
+                  return '<button type="button" class="eq-cor' + (c.id === corSel ? ' eq-ativa' : '') + '" data-cor="' + c.id + '" title="' + c.nome + '" style="background:' + c.hex + '"></button>';
+                }).join('') +
+              '</div></div>' +
+              '<div class="eq-erro" data-r="erro" hidden></div>' +
+            '</div>' +
+            '<div class="eq-rodape"><div class="eq-espaco"></div>' +
+              '<button class="eq-btn" data-a="cancelar">Cancelar</button>' +
+              '<button class="eq-btn eq-btn-escuro" data-a="salvar">' + (nomeAtual ? 'Salvar' : 'Criar categoria') + '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      );
+      function fim(v) {
+        var i = camadas.indexOf(cam); if (i !== -1) camadas.splice(i, 1);
+        cam.remove(); resolve(v);
+      }
+      cam._fechar = function () { fim(null); };
+      document.body.appendChild(cam);
+      camadas.push(cam);
+      isolarTeclado(cam);
+      cam.addEventListener('mousedown', function (e) { if (e.target === cam) fim(null); });
+      cam.addEventListener('click', function (e) {
+        var cor = e.target.closest('[data-cor]');
+        if (cor) {
+          corSel = cor.dataset.cor;
+          cam.querySelectorAll('[data-cor]').forEach(function (x) { x.classList.toggle('eq-ativa', x === cor); });
+          return;
+        }
+        var b = e.target.closest('[data-a]');
+        if (!b) return;
+        if (b.dataset.a === 'cancelar') return fim(null);
+        if (b.dataset.a === 'salvar') salvarForm();
+      });
+      cam.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); salvarForm(); } }, true);
+
+      function salvarForm() {
+        var erro = cam.querySelector('[data-r="erro"]');
+        var nome = cam.querySelector('[data-c="nome"]').value.replace(/\s+/g, ' ').trim();
+        var descricao = cam.querySelector('[data-c="descricao"]').value.replace(/\s+/g, ' ').trim();
+        if (!nome) { erro.hidden = false; erro.textContent = 'Dê um nome à categoria.'; return; }
+        var conflito = temas().some(function (t) { return mesmoTema(t[0], nome) && !mesmoTema(t[0], nomeAtual); });
+        if (conflito) { erro.hidden = false; erro.textContent = 'Já existe uma categoria chamada "' + nome + '".'; return; }
+        var cats = semExtras(categoriasCompletas());
+        var lista = null, n = 0, msg;
+        if (nomeAtual) {
+          cats = cats.map(function (c) { return mesmoTema(c.nome, nomeAtual) ? { nome: nome, descricao: descricao, cor: corSel } : c; });
+          if (nome !== nomeAtual) {
+            n = estado.perguntas.filter(function (q) { return mesmoTema(q.tema, nomeAtual); }).length;
+            lista = estado.perguntas.map(function (q) { return mesmoTema(q.tema, nomeAtual) ? Object.assign({}, q, { tema: nome }) : q; });
+            if (mesmoTema(estado.tema, nomeAtual)) estado.tema = nome;
+          }
+          msg = lista ? 'Categoria renomeada (' + n + (n === 1 ? ' pergunta atualizada).' : ' perguntas atualizadas).') : 'Categoria salva.';
+        } else {
+          cats.push({ nome: nome, descricao: descricao, cor: corSel });
+          msg = 'Categoria "' + nome + '" criada.';
+        }
+        salvarCategorias(cats, lista, msg)
+          .then(function () { fim(nome); })
+          .catch(function (e) { erro.hidden = false; erro.textContent = e.message; });
+      }
+      setTimeout(function () { cam.querySelector('[data-c="nome"]').focus(); }, 30);
+    });
+  }
+
+  // Excluir: se tiver perguntas, elas precisam ir para outra categoria antes
+  function apagarCategoria(nome) {
+    var qtd = estado.perguntas.filter(function (q) { return mesmoTema(q.tema, nome); }).length;
+    var outras = temas().filter(function (t) { return !mesmoTema(t[0], nome); });
+    var semEla = semExtras(categoriasCompletas().filter(function (c) { return !mesmoTema(c.nome, nome); }));
+    if (!qtd) {
+      return confirmar('Excluir a categoria "' + nome + '"?', 'Apagar').then(function (ok) {
+        if (ok) salvarCategorias(semEla, null, 'Categoria excluída.').catch(function (e) { aviso(e.message, true); });
+      });
+    }
+    if (!outras.length) return aviso('Crie outra categoria antes: as ' + qtd + ' perguntas precisam ir para algum lugar.', true);
+    var cam = el(
+      '<div class="eq eq-camada eq-sobre" style="z-index:20020">' +
+        '<div class="eq-caixa eq-modal" style="max-width:560px" role="alertdialog">' +
+          '<div class="eq-corpo" style="padding:1.75rem 1.75rem 1rem">' +
+            '<div style="font-size:1.05rem;font-weight:600;line-height:1.45">"' + esc(nome) + '" tem ' + (qtd === 1 ? '1 pergunta. Para qual categoria ela vai?' : qtd + ' perguntas. Para qual categoria elas vão?') + '</div>' +
+            '<select class="eq-select" data-r="destino">' + outras.map(function (t) { return '<option value="' + esc(t[0]) + '">' + esc(t[0]) + '</option>'; }).join('') + '</select>' +
+          '</div>' +
+          '<div class="eq-rodape" style="border-top:0"><div class="eq-espaco"></div>' +
+            '<button class="eq-btn" data-a="cancelar">Cancelar</button>' +
+            '<button class="eq-btn eq-btn-perigo" data-a="ok">Mover e apagar categoria</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+    function fim() { var i = camadas.indexOf(cam); if (i !== -1) camadas.splice(i, 1); cam.remove(); }
+    cam._fechar = fim;
+    document.body.appendChild(cam);
+    camadas.push(cam);
+    isolarTeclado(cam);
+    cam.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-a]');
+      if (!b) { if (e.target === cam) fim(); return; }
+      if (b.dataset.a === 'cancelar') return fim();
+      var destino = cam.querySelector('[data-r="destino"]').value;
+      var lista = estado.perguntas.map(function (q) { return mesmoTema(q.tema, nome) ? Object.assign({}, q, { tema: destino }) : q; });
+      if (mesmoTema(estado.tema, nome)) estado.tema = '__todos';
+      salvarCategorias(semEla, lista, qtd + (qtd === 1 ? ' pergunta movida' : ' perguntas movidas') + ' para "' + destino + '". Categoria excluída.')
+        .then(fim).catch(function (e) { aviso(e.message, true); });
+    });
   }
 
   // ---------- importação de CSV ----------

@@ -26,14 +26,14 @@ npm run package:win
 | `electron/main.cjs` | Processo principal: abre a janela, serve a interface num servidor local e lê/grava as perguntas. |
 | `dist/` | Interface compilada (React + Tailwind). |
 | `dist/ajuste-tela.*` | Ajustes de layout: nenhuma tela precisa de rolagem, mais as cores do fundo e da escolha de tema. |
-| `dist/editor-questoes.*` | Painel **Questões**: listar, editar, apagar e alterar em massa, além de adicionar perguntas uma a uma ou importar um CSV. |
+| `dist/editor-questoes.*` | Painel **Questões**: listar, editar, apagar e alterar em massa, além de adicionar perguntas uma a uma ou importar um CSV; gerenciar **categorias** (criar, renomear, descrição, cor, excluir). |
 | `dist/menu-apresentador.*` | Menu ☰ do apresentador: Questões, Debug e Tela cheia; exibir ou ocultar código, dificuldade e tema; tamanho do texto. |
 | `perguntas.csv` | Banco de perguntas embutido. |
 | `LEIA-ME.txt` | Instruções para quem usa o executável. |
 
 ## Perguntas
 
-No primeiro uso, o `perguntas.csv` embutido é copiado para `Documentos/Prova ou Reprova/`. A partir daí o jogo lê essa cópia, e o painel **Questões** (botão ao lado do Debug) grava nela. Antes de cada gravação o painel guarda uma cópia do arquivo anterior em `Documentos/Prova ou Reprova/backups/`.
+No primeiro uso, o `perguntas.csv` embutido é copiado para `Documentos/Prova ou Reprova/`. A partir daí o jogo lê essa cópia, e o painel **Questões** (no menu ☰) grava nela. Antes de cada gravação o painel guarda uma cópia do arquivo anterior em `Documentos/Prova ou Reprova/backups/`.
 
 Formato do CSV (vírgula ou ponto e vírgula, UTF-8 ou Excel):
 
@@ -43,6 +43,8 @@ ID,tema,pergunta,a,b,c,d,correta,fonte_completa,fonte_curta,dificuldade
 
 - `correta`: A, B, C ou D.
 - `dificuldade`: F, M ou D.
+
+As categorias (nome, descrição e cor que aparecem na escolha do tema) ficam em `categorias.json`, na mesma pasta. Categorias novas são criadas no painel **Questões › Categorias**.
 
 ## Teclas
 

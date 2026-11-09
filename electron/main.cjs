@@ -183,24 +183,79 @@ function readBody(req, limit = 20 * 1024 * 1024) {
   });
 }
 
+function salvarPerguntas(body) {
+  const file = questionsSource();
+  if (fs.existsSync(file) && body.hash !== fileHash(file)) {
+    return { status: 409, body: { error: 'O arquivo de perguntas foi alterado fora do painel. Recarregue a lista antes de salvar.' } };
+  }
+  const list = validateQuestions(body.perguntas);
+  if (fs.existsSync(file)) backupQuestions(file);
+  const tmp = file + '.tmp';
+  fs.writeFileSync(tmp, questionsToCSV(list), 'utf-8');
+  fs.renameSync(tmp, file);
+  loadQuestions(); // atualiza o título da janela
+  return { status: 200, body: { hash: fileHash(file), total: list.length } };
+}
+
+// ---------- Categorias (nome, descrição e cor de cada tema) ----------
+// Ficam em categorias.json, ao lado do perguntas.csv que está em uso.
+const CORES_CATEGORIA = ['amarelo', 'rosa', 'celeste', 'laranja', 'verde', 'roxo', 'lima'];
+
+function categoriasFile() {
+  return path.join(path.dirname(questionsSource()), 'categorias.json');
+}
+
+function readCategorias() {
+  try {
+    const list = JSON.parse(fs.readFileSync(categoriasFile(), 'utf-8'));
+    return Array.isArray(list) ? list : [];
+  } catch { return []; }
+}
+
+function validateCategorias(list) {
+  if (!Array.isArray(list)) throw new Error('Formato de categorias inválido.');
+  const nomes = new Set();
+  return list.map(c => {
+    const nome = String(c && c.nome || '').replace(/\s+/g, ' ').trim();
+    if (!nome) throw new Error('Há uma categoria sem nome.');
+    if (nome.length > 60) throw new Error(`O nome "${nome.slice(0, 20)}…" é longo demais (máx. 60 caracteres).`);
+    if (nomes.has(nome.toLowerCase())) throw new Error(`Categoria repetida: ${nome}.`);
+    nomes.add(nome.toLowerCase());
+    const descricao = String(c.descricao || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+    const cor = CORES_CATEGORIA.includes(c.cor) ? c.cor : '';
+    return { nome, descricao, cor };
+  });
+}
+
+function writeCategorias(list) {
+  const file = categoriasFile();
+  const tmp = file + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(list, null, 2) + '\n', 'utf-8');
+  fs.renameSync(tmp, file);
+}
+
 async function editorHandler(req, res, p) {
   if (p === '/api/editor/perguntas' && req.method === 'GET') {
     const file = questionsSource();
-    return send(res, 200, JSON.stringify({ arquivo: file, hash: fileHash(file), perguntas: loadQuestions() }));
+    return send(res, 200, JSON.stringify({ arquivo: file, hash: fileHash(file), perguntas: loadQuestions(), categorias: readCategorias() }));
   }
   if (p === '/api/editor/perguntas' && req.method === 'PUT') {
     const body = JSON.parse((await readBody(req)).toString('utf-8') || '{}');
-    const file = questionsSource();
-    if (fs.existsSync(file) && body.hash !== fileHash(file)) {
-      return send(res, 409, JSON.stringify({ error: 'O arquivo de perguntas foi alterado fora do painel. Recarregue a lista antes de salvar.' }));
+    const r = salvarPerguntas(body);
+    return send(res, r.status, JSON.stringify(r.body));
+  }
+  // Categorias: grava os metadados e, se vierem junto (renomear/mover), as perguntas
+  if (p === '/api/editor/categorias' && req.method === 'PUT') {
+    const body = JSON.parse((await readBody(req)).toString('utf-8') || '{}');
+    const cats = validateCategorias(body.categorias);
+    let out = {};
+    if (body.perguntas) {
+      const r = salvarPerguntas(body);
+      if (r.status !== 200) return send(res, r.status, JSON.stringify(r.body));
+      out = r.body;
     }
-    const list = validateQuestions(body.perguntas);
-    if (fs.existsSync(file)) backupQuestions(file);
-    const tmp = file + '.tmp';
-    fs.writeFileSync(tmp, questionsToCSV(list), 'utf-8');
-    fs.renameSync(tmp, file);
-    loadQuestions(); // atualiza o título da janela
-    return send(res, 200, JSON.stringify({ hash: fileHash(file), total: list.length }));
+    writeCategorias(cats);
+    return send(res, 200, JSON.stringify({ ...out, categorias: cats }));
   }
   if (p === '/api/editor/importar' && req.method === 'POST') {
     const rows = parseCSV(decodeText(await readBody(req)));
@@ -235,6 +290,10 @@ function handler(req, res) {
       .then(r => { if (r === false) send(res, 404, JSON.stringify({ error: 'Rota não encontrada.' })); })
       .catch(e => { if (!res.headersSent) send(res, 400, JSON.stringify({ error: e.message })); });
     return;
+  }
+
+  if (p === '/api/categorias' && req.method === 'GET') {
+    return send(res, 200, JSON.stringify(readCategorias()));
   }
 
   if (p === '/api/perguntas' && req.method === 'GET') {
