@@ -19,10 +19,23 @@ function setupDataDir() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   QUESTIONS_FILE = path.join(DATA_DIR, 'perguntas.csv');
   LOGS_FILE = path.join(DATA_DIR, 'logs_arena.csv');
-  // Cópias antigas geradas automaticamente pela versão anterior são atualizadas
-  const OLD_DEFAULTS = ['0ed82690441cf27aa332904bd7c61045b23b07ac32987eefddb219a9a3aa8ed9', 'b809db9eec6a3864dd9e2b42f79529613c32f4533a5ccebb141ae913c2050e89', 'c4bad671a3a0e594a1f527577867f34f95a15b5fb9dd231fa2a4671130714b21'];
-  const sha = f => require('crypto').createHash('sha256').update(fs.readFileSync(f)).digest('hex');
-  if (fs.existsSync(BUNDLED_CSV) && (!fs.existsSync(QUESTIONS_FILE) || OLD_DEFAULTS.includes(sha(QUESTIONS_FILE)))) {
+  // Cópias antigas geradas automaticamente por versões anteriores são atualizadas.
+  // Os hashes são do arquivo com quebras de linha LF; a comparação ignora CRLF/LF
+  // (no build de Windows o checkout converte as quebras de linha).
+  // Ao trocar o perguntas.csv embutido, acrescente aqui o hash do anterior.
+  const OLD_DEFAULTS = [
+    '0ed82690441cf27aa332904bd7c61045b23b07ac32987eefddb219a9a3aa8ed9',
+    'b809db9eec6a3864dd9e2b42f79529613c32f4533a5ccebb141ae913c2050e89',
+    'c4bad671a3a0e594a1f527577867f34f95a15b5fb9dd231fa2a4671130714b21', // 1.0.0 e 1.1.0
+  ];
+  const crypto = require('crypto');
+  const sha = buf => crypto.createHash('sha256').update(buf).digest('hex');
+  const ehPadraoAntigo = f => {
+    const buf = fs.readFileSync(f);
+    const lf = Buffer.from(buf.toString('latin1').replace(/\r\n/g, '\n'), 'latin1');
+    return OLD_DEFAULTS.includes(sha(buf)) || OLD_DEFAULTS.includes(sha(lf));
+  };
+  if (fs.existsSync(BUNDLED_CSV) && (!fs.existsSync(QUESTIONS_FILE) || ehPadraoAntigo(QUESTIONS_FILE))) {
     fs.copyFileSync(BUNDLED_CSV, QUESTIONS_FILE);
   }
 }
